@@ -1,15 +1,17 @@
 // ==UserScript==
-// @name        WhatsApp Collapsible Sidebars
-// @namespace   JackMBurch
-// @version     1.2
+// @name        WhatsApp Collapsible Sidebars (kriskhaira fork)
+// @namespace   kriskhaira
+// @version     1.2.1
 // @grant       none
 // @license     GNU GPLv3
 // @author      JackMBurch
 // @contributor imxitiz (original author)
+// @contributor kriskhaira (fork: carets follow the resize drag)
+// @homepageURL https://github.com/kriskhaira/whatsapp-collapsible-sidebars
 // @match       https://web.whatsapp.com/
 // @description Collapse/expand the WhatsApp Web icon rail AND the chat list with clickable carets (chat-list caret on by default; falls back to hover show/hide when disabled), plus a draggable handle to resize the chat list width.
-// @downloadURL https://update.greasyfork.org/scripts/584118/WhatsApp%20Collapsible%20Sidebars.user.js
-// @updateURL https://update.greasyfork.org/scripts/584118/WhatsApp%20Collapsible%20Sidebars.meta.js
+// @downloadURL https://raw.githubusercontent.com/kriskhaira/whatsapp-collapsible-sidebars/main/whatsapp-collapsible-sidebars.user.js
+// @updateURL   https://raw.githubusercontent.com/kriskhaira/whatsapp-collapsible-sidebars/main/whatsapp-collapsible-sidebars.user.js
 // ==/UserScript==
 
 (() => {
@@ -318,6 +320,7 @@
         if (newFlexBasis >= 5 && newFlexBasis <= 80) {
             userDefinedFlexBasis = newFlexBasis;
             renderChatListStyle();
+            positionCarets(); // keep the chat-list caret on the edge being dragged
         }
 
         if (!userResizedOnce) {
@@ -332,6 +335,7 @@
     function stopResize() {
         isResizing = false;
         renderChatListStyle(); // restore transition
+        positionCarets();
         document.removeEventListener("mousemove", resizeChatList);
         document.removeEventListener("mouseup", stopResize);
     }
