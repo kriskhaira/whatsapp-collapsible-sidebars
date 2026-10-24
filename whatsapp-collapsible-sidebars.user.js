@@ -547,6 +547,9 @@
         if (!under) return false;
         const root = under.closest(".whc-chatlist, #main");
         if (!root) return true; // a portal outside the panes: menu, modal
+        // The compose footer never reaches the carets' height on its own, so
+        // anything of it under a caret is its emoji/GIF/sticker panel.
+        if (under.closest("#main footer")) return true;
         for (let el = under; el && el !== root; el = el.parentElement) {
             if (isFloatingLayer(el, root)) return true;
         }
