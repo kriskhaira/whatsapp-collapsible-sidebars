@@ -5,6 +5,7 @@ Fork of [WhatsApp Collapsible Sidebars](https://greasyfork.org/en/scripts/584118
 ## Changes from v1.2
 
 - The chat-list caret now follows the edge while you drag the resize handle. In v1.2 it stayed at the old width until the window was resized.
+- The carets hide when a WhatsApp popover (emoji/GIF picker, menu, dialog) covers them, and clicks pass through to it. In v1.2 they floated on top of the picker.
 
 ## Install
 

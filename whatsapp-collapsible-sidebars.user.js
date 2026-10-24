@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name        WhatsApp Collapsible Sidebars (kriskhaira fork)
 // @namespace   kriskhaira
-// @version     1.2.1
+// @version     1.2.2
 // @grant       none
 // @license     GNU GPLv3
 // @author      JackMBurch
 // @contributor imxitiz (original author)
-// @contributor kriskhaira (fork: carets follow the resize drag)
+// @contributor kriskhaira (fork: carets follow the resize drag, hide under popovers)
 // @homepageURL https://github.com/kriskhaira/whatsapp-collapsible-sidebars
 // @match       https://web.whatsapp.com/
 // @description Collapse/expand the WhatsApp Web icon rail AND the chat list with clickable carets (chat-list caret on by default; falls back to hover show/hide when disabled), plus a draggable handle to resize the chat list width.
@@ -511,6 +511,61 @@
     }
 
     // ============================================================
+    // OCCLUSION — let WhatsApp's popovers cover the carets
+    // ============================================================
+    // The carets sit at z-index 100000 so they stay above the panes, which
+    // also put them on top of WhatsApp's own popovers (emoji/GIF picker,
+    // menus, dialogs). WhatsApp's z-index values aren't stable, so instead of
+    // picking a number we look at what's painted under each caret's centre:
+    // if it's a floating layer rather than the plain chat list or
+    // conversation, the caret fades out and lets clicks through.
+    const OCCLUSION_INTERVAL = 300;
+
+    function isFloatingLayer(el, root) {
+        const style = getComputedStyle(el);
+        if (style.position !== "fixed" && style.position !== "absolute") {
+            return false;
+        }
+        if (style.position === "absolute" && style.zIndex === "auto") {
+            return false;
+        }
+        // A layer that fills the whole pane (e.g. the wallpaper) is layout,
+        // not a popover.
+        const r = el.getBoundingClientRect();
+        const rr = root.getBoundingClientRect();
+        return r.width < rr.width * 0.98 || r.height < rr.height * 0.98;
+    }
+
+    function isCaretOccluded(btn) {
+        const rect = btn.getBoundingClientRect();
+        if (!rect.width) return false;
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+        const under = document
+            .elementsFromPoint(x, y)
+            .find((el) => !el.id || !el.id.startsWith("whc-"));
+        if (!under) return false;
+        const root = under.closest(".whc-chatlist, #main");
+        if (!root) return true; // a portal outside the panes: menu, modal
+        for (let el = under; el && el !== root; el = el.parentElement) {
+            if (isFloatingLayer(el, root)) return true;
+        }
+        return false;
+    }
+
+    function updateCaretOcclusion() {
+        ["whc-rail-toggle", "whc-chatlist-toggle"].forEach((id) => {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            const occluded = isCaretOccluded(btn);
+            if (btn.classList.contains("whc-occluded") !== occluded) {
+                btn.classList.toggle("whc-occluded", occluded);
+                log(id, occluded ? "occluded" : "visible");
+            }
+        });
+    }
+
+    // ============================================================
     // MOUSEMOVE — hover show/hide (only active after setup)
     // ============================================================
     function updateSidebarVisibility() {
@@ -618,6 +673,12 @@
                     font-size: 11px;
                     line-height: 1;
                 }
+                /* Under a WhatsApp popover: hide and let clicks through. */
+                #whc-rail-toggle.whc-occluded,
+                #whc-chatlist-toggle.whc-occluded {
+                    opacity: 0 !important;
+                    pointer-events: none;
+                }
                 #whc-rail-toggle:hover,
                 #whc-chatlist-toggle:hover {
                     background: rgba(0, 0, 0, 0.65);
@@ -693,6 +754,13 @@
         // re-renders (it returns early before any hover logic).
         document.addEventListener("mousemove", onMouseMove);
         window.addEventListener("resize", positionCarets);
+        setInterval(() => {
+            try {
+                updateCaretOcclusion();
+            } catch (err) {
+                error("updateCaretOcclusion failed:", err);
+            }
+        }, OCCLUSION_INTERVAL);
         log("Setup complete.");
     }
 
